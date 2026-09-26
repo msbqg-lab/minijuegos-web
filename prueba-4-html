@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Air Striker - Duelo de Discos Canvas</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card: #121a2d;
+      --card-alt: #1a253e;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --p1: #ef4444;
+      --p2: #3b82f6;
+      --border: #233354;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      touch-action: none;
+      user-select: none;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.5rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 500px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    header {
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      color: var(--accent);
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.9rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .rules-card {
+      border-left: 4px solid var(--accent);
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+
+    .lobby {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    input[type="text"] {
+      padding: 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #080c14;
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .btn {
+      padding: 0.8rem 1.2rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #090d16;
+      font-weight: bold;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-secondary { background: #334155; color: white; }
+    .btn-reset { background: #f59e0b; color: #090d16; width: 100%; margin-top: 0.4rem; }
+
+    .game-area {
+      display: none;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .room-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-alt);
+      padding: 0.5rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+
+    .player-tag {
+      padding: 0.2rem 0.6rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+
+    .tag-p1 { background: rgba(239, 68, 68, 0.2); color: var(--p1); border: 1px solid var(--p1); }
+    .tag-p2 { background: rgba(59, 130, 246, 0.2); color: var(--p2); border: 1px solid var(--p2); }
+
+    .scoreboard {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .player-bar {
+      flex: 1;
+      background: var(--card-alt);
+      border-radius: 8px;
+      padding: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .player-bar.p1-side { border-left: 3px solid var(--p1); }
+    .player-bar.p2-side { border-right: 3px solid var(--p2); text-align: right; }
+
+    .hp-bg {
+      width: 100%;
+      height: 8px;
+      background: #080c14;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .hp-fill {
+      height: 100%;
+      width: 100%;
+      transition: width 0.3s;
+    }
+
+    #gameCanvas {
+      width: 100%;
+      height: auto;
+      background: #0b1324;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      display: block;
+    }
+
+    .turn-banner {
+      text-align: center;
+      padding: 0.45rem;
+      border-radius: 8px;
+      background: var(--card-alt);
+      font-weight: bold;
+      font-size: 0.88rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>🏒 Air Striker 2D</h1>
+      <p style="color: var(--text-muted); font-size: 0.8rem;">Arrastra tu disco y dispara como una resortera</p>
+    </header>
+
+    <div class="card rules-card">
+      <p>🎯 <strong>Cómo jugar:</strong> En tu turno, mantén pulsado sobre tu disco, arrastra en dirección contraria para apuntar la flecha y suelta para lanzar. ¡Impacta al disco rival o anota en su arco!</p>
+    </div>
+
+    <!-- Menú Inicial -->
+    <div class="card lobby" id="lobby">
+      <div class="input-group">
+        <label for="inputNick">TU NOMBRE (OBLIGATORIO):</label>
+        <input type="text" id="inputNick" maxlength="12" placeholder="Ej: Marcos">
+      </div>
+
+      <button class="btn" id="btnCreate">🚀 Crear Mesa de Juego</button>
+      <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted);">O ÚNETE CON UN CÓDIGO</div>
+
+      <div style="display: flex; gap: 0.4rem;">
+        <input type="text" id="inputRoom" maxlength="4" placeholder="CÓDIGO" style="flex: 1; text-transform: uppercase;">
+        <button class="btn btn-secondary" id="btnJoin">Unirse</button>
+      </div>
+    </div>
+
+    <!-- Mesa de Juego -->
+    <div class="card game-area" id="gameArea">
+      <div class="room-header">
+        <div>MESA: <span id="displayRoomCode" style="color: var(--accent); font-weight: bold;">----</span></div>
+        <div id="playerTag" class="player-tag">Esperando...</div>
+      </div>
+
+      <div class="scoreboard">
+        <div class="player-bar p1-side">
+          <div id="nameP1" style="font-weight: bold; font-size: 0.85rem;">P1</div>
+          <div class="hp-bg"><div class="hp-fill" id="hpBarP1" style="background: var(--p1);"></div></div>
+        </div>
+        <div class="player-bar p2-side">
+          <div id="nameP2" style="font-weight: bold; font-size: 0.85rem;">P2</div>
+          <div class="hp-bg"><div class="hp-fill" id="hpBarP2" style="background: var(--p2);"></div></div>
+        </div>
+      </div>
+
+      <!-- Lienzo Vertical para móviles y PC -->
+      <canvas id="gameCanvas" width="400" height="520"></canvas>
+
+      <div class="turn-banner" id="turnBanner">Esperando rival...</div>
+      <button class="btn btn-reset" id="btnReset" style="display: none;">🔄 Revancha Inmediata</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCvvUoD9nS8U0XFCOLSBWIx2Ec_ELPI8Us",
+      authDomain: "minijuegos-web.firebaseapp.com",
+      projectId: "minijuegos-web",
+      storageBucket: "minijuegos-web.firebasestorage.app",
+      messagingSenderId: "977777183362",
+      appId: "1:977777183362:web:cb145daf4714fef320829b",
+      measurementId: "G-8XTZB1CX3D",
+      databaseURL: "https://minijuegos-web-default-rtdb.firebaseio.com"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Sistema de Sonidos Web Audio
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playTone(freq, dur = 0.08, type = 'sine') {
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + dur);
+      } catch (e) {}
+    }
+
+    const sfx = {
+      shot: () => playTone(320, 0.12, 'triangle'),
+      bounce: () => playTone(240, 0.06, 'sine'),
+      clash: () => playTone(120, 0.2, 'square'),
+      goal: () => {
+        playTone(400, 0.1);
+        setTimeout(() => playTone(600, 0.15), 100);
+        setTimeout(() => playTone(800, 0.25), 220);
+      }
+    };
+
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let roomCode = "";
+    let playerRole = null;
+    let myNick = "";
+    let gameState = null;
+    let lastHandledShotId = null;
+
+    // Discos
+    const DISC_RADIUS = 22;
+    let discs = {
+      p1: { x: 200, y: 440, vx: 0, vy: 0, color: "#ef4444" },
+      p2: { x: 200, y: 80,  vx: 0, vy: 0, color: "#3b82f6" }
+    };
+
+    // Control de apuntado táctil/ratón
+    let isAiming = false;
+    let dragPos = { x: 0, y: 0 };
+    let isMoving = false;
+
+    // DOM
+    const lobby = document.getElementById("lobby");
+    const gameArea = document.getElementById("gameArea");
+    const inputNick = document.getElementById("inputNick");
+    const inputRoom = document.getElementById("inputRoom");
+    const btnCreate = document.getElementById("btnCreate");
+    const btnJoin = document.getElementById("btnJoin");
+    const displayRoomCode = document.getElementById("displayRoomCode");
+    const playerTag = document.getElementById("playerTag");
+    const turnBanner = document.getElementById("turnBanner");
+    const nameP1 = document.getElementById("nameP1");
+    const nameP2 = document.getElementById("nameP2");
+    const hpBarP1 = document.getElementById("hpBarP1");
+    const hpBarP2 = document.getElementById("hpBarP2");
+    const btnReset = document.getElementById("btnReset");
+
+    function makeId() {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let code = "";
+      for (let i = 0; i < 4; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+      return code;
+    }
+
+    btnCreate.addEventListener("click", async () => {
+      myNick = inputNick.value.trim();
+      if (!myNick) return alert("Escribe tu nombre.");
+      roomCode = makeId();
+      playerRole = "p1";
+
+      await set(ref(db, `striker/${roomCode}`), {
+        nameP1: myNick,
+        nameP2: "Esperando...",
+        hpP1: 100,
+        hpP2: 100,
+        turn: "p1",
+        status: "waiting",
+        shot: null,
+        winner: null
+      });
+      initGame();
+    });
+
+    btnJoin.addEventListener("click", async () => {
+      myNick = inputNick.value.trim();
+      const code = inputRoom.value.trim().toUpperCase();
+      if (!myNick || code.length !== 4) return alert("Código inválido.");
+
+      const roomRef = ref(db, `striker/${code}`);
+      const snap = await get(roomRef);
+      if (!snap.exists()) return alert("La sala no existe.");
+
+      roomCode = code;
+      playerRole = "p2";
+
+      await update(roomRef, {
+        nameP2: myNick,
+        status: "playing"
+      });
+      initGame();
+    });
+
+    function initGame() {
+      lobby.style.display = "none";
+      gameArea.style.display = "flex";
+      displayRoomCode.innerText = roomCode;
+
+      if (playerRole === "p1") {
+        playerTag.className = "player-tag tag-p1";
+        playerTag.innerText = `P1: ${myNick}`;
+      } else {
+        playerTag.className = "player-tag tag-p2";
+        playerTag.innerText = `P2: ${myNick}`;
+      }
+
+      onValue(ref(db, `striker/${roomCode}`), (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+        gameState = data;
+
+        nameP1.innerText = `${data.nameP1} (${data.hpP1}%)`;
+        nameP2.innerText = `${data.nameP2} (${data.hpP2}%)`;
+        hpBarP1.style.width = `${Math.max(0, data.hpP1)}%`;
+        hpBarP2.style.width = `${Math.max(0, data.hpP2)}%`;
+
+        // Procesar tiro sincronizado
+        if (data.shot && data.shot.id !== lastHandledShotId) {
+          lastHandledShotId = data.shot.id;
+          applyShot(data.shot);
+        }
+
+        if (data.status === "waiting") {
+          turnBanner.innerText = `Comparte el código [ ${roomCode} ]`;
+          return;
+        }
+
+        if (data.winner) {
+          btnReset.style.display = "block";
+          const winName = data.winner === "p1" ? data.nameP1 : data.nameP2;
+          turnBanner.innerText = data.winner === playerRole ? `👑 ¡Victoria magistral, ${winName}!` : `💀 Victoria de ${winName}`;
+          return;
+        }
+
+        btnReset.style.display = "none";
+        if (!isMoving) {
+          if (data.turn === playerRole) {
+            turnBanner.innerText = `👉 ¡Tu turno! Arrastra tu disco y lanza`;
+          } else {
+            const rivalName = data.turn === "p1" ? data.nameP1 : data.nameP2;
+            turnBanner.innerText = `⏳ Turno de ${rivalName}...`;
+          }
+        }
+      });
+
+      setupPointerEvents();
+      requestAnimationFrame(renderLoop);
+    }
+
+    // Interacción resortera directa sobre el Canvas
+    function setupPointerEvents() {
+      function getCanvasCoords(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        return {
+          x: (clientX - rect.left) * scaleX,
+          y: (clientY - rect.top) * scaleY
+        };
+      }
+
+      function handleStart(e) {
+        if (!gameState || gameState.status !== "playing" || gameState.winner || gameState.turn !== playerRole || isMoving) return;
+        const pt = getCanvasCoords(e);
+        const myDisc = discs[playerRole];
+        const dist = Math.hypot(pt.x - myDisc.x, pt.y - myDisc.y);
+
+        if (dist <= DISC_RADIUS + 15) {
+          isAiming = true;
+          dragPos = pt;
+        }
+      }
+
+      function handleMove(e) {
+        if (!isAiming) return;
+        dragPos = getCanvasCoords(e);
+      }
+
+      async function handleEnd() {
+        if (!isAiming) return;
+        isAiming = false;
+
+        const myDisc = discs[playerRole];
+        const dx = myDisc.x - dragPos.x;
+        const dy = myDisc.y - dragPos.y;
+        const pullDist = Math.hypot(dx, dy);
+
+        if (pullDist > 10) {
+          const power = Math.min(pullDist, 120) * 0.18;
+          const angle = Math.atan2(dy, dx);
+          const vx = Math.cos(angle) * power;
+          const vy = Math.sin(angle) * power;
+
+          await update(ref(db, `striker/${roomCode}`), {
+            shot: {
+              id: Date.now(),
+              by: playerRole,
+              vx: vx,
+              vy: vy
+            }
+          });
+        }
+      }
+
+      canvas.addEventListener("mousedown", handleStart);
+      window.addEventListener("mousemove", handleMove);
+      window.addEventListener("mouseup", handleEnd);
+
+      canvas.addEventListener("touchstart", (e) => { e.preventDefault(); handleStart(e); }, { passive: false });
+      window.addEventListener("touchmove", (e) => { if (isAiming) handleMove(e); }, { passive: false });
+      window.addEventListener("touchend", handleEnd);
+    }
+
+    function applyShot(shot) {
+      sfx.shot();
+      const shooter = discs[shot.by];
+      shooter.vx = shot.vx;
+      shooter.vy = shot.vy;
+      isMoving = true;
+      turnBanner.innerText = "⚡ ¡Disco en juego!";
+    }
+
+    // Motor de Física y Dibujo a 60 FPS
+    function renderLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      drawMesa();
+
+      if (gameState) {
+        updatePhysics();
+        drawDiscs();
+        if (isAiming) drawAimArrow();
+      }
+
+      requestAnimationFrame(renderLoop);
+    }
+
+    function drawMesa() {
+      // Líneas de la mesa
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.25)";
+      ctx.lineWidth = 2;
+
+      // Línea central y círculo
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height / 2);
+      ctx.lineTo(canvas.width, canvas.height / 2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(canvas.width / 2, canvas.height / 2, 45, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Arcos (Porterías)
+      ctx.fillStyle = "rgba(239, 68, 68, 0.2)";
+      ctx.fillRect(130, canvas.height - 8, 140, 8); // Portería P1
+      ctx.fillStyle = "rgba(59, 130, 246, 0.2)";
+      ctx.fillRect(130, 0, 140, 8); // Portería P2
+    }
+
+    function drawDiscs() {
+      ["p1", "p2"].forEach((role) => {
+        const d = discs[role];
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, DISC_RADIUS, 0, Math.PI * 2);
+        ctx.fillStyle = d.color;
+        ctx.shadowColor = d.color;
+        ctx.shadowBlur = 12;
+        ctx.fill();
+
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 11px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(role.toUpperCase(), d.x, d.y);
+        ctx.restore();
+      });
+    }
+
+    function drawAimArrow() {
+      const myDisc = discs[playerRole];
+      const dx = myDisc.x - dragPos.x;
+      const dy = myDisc.y - dragPos.y;
+      const pullDist = Math.hypot(dx, dy);
+
+      if (pullDist > 10) {
+        ctx.save();
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([4, 4]);
+
+        ctx.beginPath();
+        ctx.moveTo(myDisc.x, myDisc.y);
+        ctx.lineTo(myDisc.x + dx, myDisc.y + dy);
+        ctx.stroke();
+
+        // Cabeza de la flecha
+        const angle = Math.atan2(dy, dx);
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.arc(myDisc.x + dx, myDisc.y + dy, 6, 0, Math.PI * 2);
+        ctx.fillStyle = "#38bdf8";
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function updatePhysics() {
+      let speedTotal = 0;
+
+      ["p1", "p2"].forEach((role) => {
+        const d = discs[role];
+        d.x += d.vx;
+        d.y += d.vy;
+
+        // Fricción
+        d.vx *= 0.982;
+        d.vy *= 0.982;
+
+        if (Math.abs(d.vx) < 0.08) d.vx = 0;
+        if (Math.abs(d.vy) < 0.08) d.vy = 0;
+
+        speedTotal += Math.hypot(d.vx, d.vy);
+
+        // Rebotes paredes laterales
+        if (d.x - DISC_RADIUS <= 0) { d.x = DISC_RADIUS; d.vx *= -1; sfx.bounce(); }
+        if (d.x + DISC_RADIUS >= canvas.width) { d.x = canvas.width - DISC_RADIUS; d.vx *= -1; sfx.bounce(); }
+
+        // Rebotes superior e inferior
+        if (d.y - DISC_RADIUS <= 0) {
+          // Revisar si entró en el arco rival
+          if (d.x >= 130 && d.x <= 270) handleGoal("p1"); // Gol anota P1
+          else { d.y = DISC_RADIUS; d.vy *= -1; sfx.bounce(); }
+        }
+        if (d.y + DISC_RADIUS >= canvas.height) {
+          if (d.x >= 130 && d.x <= 270) handleGoal("p2"); // Gol anota P2
+          else { d.y = canvas.height - DISC_RADIUS; d.vy *= -1; sfx.bounce(); }
+        }
+      });
+
+      // Choque entre discos
+      const d1 = discs.p1;
+      const d2 = discs.p2;
+      const dist = Math.hypot(d2.x - d1.x, d2.y - d1.y);
+
+      if (dist < DISC_RADIUS * 2) {
+        sfx.clash();
+        const angle = Math.atan2(d2.y - d1.y, d2.x - d1.x);
+        const overlap = DISC_RADIUS * 2 - dist;
+
+        d1.x -= Math.cos(angle) * (overlap / 2);
+        d1.y -= Math.sin(angle) * (overlap / 2);
+        d2.x += Math.cos(angle) * (overlap / 2);
+        d2.y += Math.sin(angle) * (overlap / 2);
+
+        // Transferencia de impulso elástico
+        const tempVx = d1.vx;
+        const tempVy = d1.vy;
+        d1.vx = d2.vx * 0.85;
+        d1.vy = d2.vy * 0.85;
+        d2.vx = tempVx * 0.85;
+        d2.vy = tempVy * 0.85;
+
+        // Daño por choque al rival
+        if (gameState && gameState.status === "playing" && playerRole === gameState.turn) {
+          applyClashDamage();
+        }
+      }
+
+      // Detención del tiro -> Pasar turno de forma infalible
+      if (isMoving && speedTotal === 0) {
+        isMoving = false;
+        resolveTurnEnd();
+      }
+    }
+
+    async function applyClashDamage() {
+      const roomRef = ref(db, `striker/${roomCode}`);
+      const snap = await get(roomRef);
+      const data = snap.val();
+      if (!data) return;
+
+      const targetPrefix = playerRole === "p1" ? "hpP2" : "hpP1";
+      const newHp = Math.max(0, data[targetPrefix] - 15);
+      let updates = {};
+      updates[targetPrefix] = newHp;
+      if (newHp <= 0) {
+        updates.winner = playerRole;
+        updates.status = "finished";
+      }
+      await update(roomRef, updates);
+    }
+
+    async function handleGoal(scorer) {
+      sfx.goal();
+      // Reposicionar discos al centro de cada campo
+      discs.p1 = { x: 200, y: 440, vx: 0, vy: 0, color: "#ef4444" };
+      discs.p2 = { x: 200, y: 80,  vx: 0, vy: 0, color: "#3b82f6" };
+
+      if (playerRole === scorer) {
+        const roomRef = ref(db, `striker/${roomCode}`);
+        const snap = await get(roomRef);
+        const data = snap.val();
+        if (!data) return;
+
+        const targetPrefix = scorer === "p1" ? "hpP2" : "hpP1";
+        const newHp = Math.max(0, data[targetPrefix] - 30); // Gol resta 30%
+        let updates = {};
+        updates[targetPrefix] = newHp;
+        if (newHp <= 0) {
+          updates.winner = scorer;
+          updates.status = "finished";
+        }
+        await update(roomRef, updates);
+      }
+    }
+
+    async function resolveTurnEnd() {
+      // Solo el jugador que disparó rota el turno en Firebase
+      if (gameState && gameState.turn === playerRole && !gameState.winner) {
+        const nextTurn = playerRole === "p1" ? "p2" : "p1";
+        await update(ref(db, `striker/${roomCode}`), {
+          turn: nextTurn,
+          shot: null
+        });
+      }
+    }
+
+    btnReset.addEventListener("click", async () => {
+      discs.p1 = { x: 200, y: 440, vx: 0, vy: 0, color: "#ef4444" };
+      discs.p2 = { x: 200, y: 80,  vx: 0, vy: 0, color: "#3b82f6" };
+      isMoving = false;
+      lastHandledShotId = null;
+
+      await update(ref(db, `striker/${roomCode}`), {
+        hpP1: 100,
+        hpP2: 100,
+        turn: "p1",
+        status: "playing",
+        winner: null,
+        shot: null
+      });
+    });
+  </script>
+</body>
+</html>
