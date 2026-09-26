@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carrera Táctica - Multijugador</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card: #131d2e;
+      --card-alt: #1a2840;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --p1: #ec4899;
+      --p2: #8b5cf6;
+      --boost: #10b981;
+      --trap: #ef4444;
+      --border: #22324e;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem 1rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 650px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    header {
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .rules-card {
+      border-left: 4px solid var(--accent);
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    .rules-card h3 {
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+
+    .rules-card ul {
+      padding-left: 1.2rem;
+    }
+
+    .rules-card li {
+      margin-bottom: 0.35rem;
+    }
+
+    .lobby {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    input[type="text"] {
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #080c14;
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+
+    .btn {
+      padding: 0.85rem 1.25rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #080c14;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #334155;
+      color: white;
+    }
+
+    .btn-reset {
+      background: #f59e0b;
+      color: #080c14;
+      margin-top: 0.5rem;
+    }
+
+    .game-area {
+      display: none;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .game-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-alt);
+      padding: 0.8rem 1rem;
+      border-radius: 10px;
+    }
+
+    .room-badge {
+      font-family: monospace;
+      font-weight: bold;
+      color: var(--accent);
+      font-size: 1.1rem;
+      letter-spacing: 1px;
+    }
+
+    .player-tag {
+      padding: 0.35rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+
+    .tag-p1 { background: rgba(236, 72, 153, 0.2); color: var(--p1); border: 1px solid var(--p1); }
+    .tag-p2 { background: rgba(139, 92, 246, 0.2); color: var(--p2); border: 1px solid var(--p2); }
+
+    .scoreboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .player-box {
+      background: var(--card-alt);
+      border-radius: 8px;
+      padding: 0.75rem;
+      border-top: 3px solid transparent;
+    }
+
+    .player-box.p1-box { border-color: var(--p1); }
+    .player-box.p2-box { border-color: var(--p2); }
+
+    .player-box-title {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .player-box-name {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin: 0.2rem 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .player-box-score {
+      font-size: 0.85rem;
+      color: var(--accent);
+    }
+
+    .track-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      margin: 0.5rem 0;
+    }
+
+    .track-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .track-scroll {
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+
+    .track {
+      display: flex;
+      gap: 4px;
+      background: #080c14;
+      padding: 0.5rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      min-width: 580px;
+    }
+
+    .step-cell {
+      flex: 1;
+      height: 38px;
+      border-radius: 6px;
+      background: #182234;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #64748b;
+      position: relative;
+    }
+
+    .step-cell.boost { background: #064e3b; color: #34d399; }
+    .step-cell.trap { background: #450a0a; color: #f87171; }
+    .step-cell.finish { background: #422006; color: #facc15; font-size: 1rem; }
+
+    .token {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      position: absolute;
+      box-shadow: 0 0 10px currentColor;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      color: white;
+      font-weight: bold;
+      animation: pop 0.2s ease-out;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0.4); }
+      100% { transform: scale(1); }
+    }
+
+    .token-p1 { background: var(--p1); }
+    .token-p2 { background: var(--p2); }
+
+    .turn-banner {
+      text-align: center;
+      padding: 0.85rem;
+      border-radius: 10px;
+      background: var(--card-alt);
+      font-weight: bold;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+    }
+
+    .actions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .log-box {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      text-align: center;
+      min-height: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>🏁 Carrera Táctica</h1>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Llega a la meta de 15 casillas burlando las trampas</p>
+    </header>
+
+    <!-- Reglas -->
+    <div class="card rules-card">
+      <h3>📜 Reglas & Casillas Especiales</h3>
+      <ul>
+        <li>Ingresa tu nombre para identificarte en la partida.</li>
+        <li><strong>Paso Seguro (1 casilla):</strong> Movimiento con 100% de éxito.</li>
+        <li><strong>Avance Rápido (2 casillas):</strong> 25% de probabilidad de tropezar y no avanzar.</li>
+        <li><strong>🟢 Casilla Impulso (Casillas 4 y 10):</strong> Te adelanta 2 casillas extra de inmediato.</li>
+        <li><strong>🔴 Casilla Trampa (Casillas 7 y 12):</strong> Te retrocede 1 casilla.</li>
+      </ul>
+    </div>
+
+    <!-- Lobby / Registro -->
+    <div class="card lobby" id="lobby">
+      <div class="input-group">
+        <label for="inputNick">TU NOMBRE O APODO (OBLIGATORIO):</label>
+        <input type="text" id="inputNick" maxlength="15" placeholder="Ej: Marcos">
+      </div>
+
+      <div style="display: flex; gap: 0.75rem; margin-top: 0.5rem;">
+        <button class="btn" style="flex: 1;" id="btnCreate">➕ Crear Sala</button>
+      </div>
+
+      <div style="text-align: center; font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0;">O ÚNETE CON UN CÓDIGO</div>
+
+      <div style="display: flex; gap: 0.5rem;">
+        <input type="text" id="inputRoom" maxlength="4" placeholder="CÓDIGO (EJ: AB12)" style="flex: 1; text-transform: uppercase;">
+        <button class="btn btn-secondary" id="btnJoin">Unirse</button>
+      </div>
+    </div>
+
+    <!-- Tablero de Partida -->
+    <div class="card game-area" id="gameArea">
+      <div class="game-header">
+        <div>SALA: <span class="room-badge" id="displayRoomCode">----</span></div>
+        <div id="playerTag" class="player-tag">Esperando...</div>
+      </div>
+
+      <div class="scoreboard">
+        <div class="player-box p1-box">
+          <div class="player-box-title">Jugador 1 (Rosa)</div>
+          <div class="player-box-name" id="nameP1">Esperando...</div>
+          <div class="player-box-score" id="scoreP1">Casilla: 0 / 15</div>
+        </div>
+        <div class="player-box p2-box">
+          <div class="player-box-title">Jugador 2 (Morado)</div>
+          <div class="player-box-name" id="nameP2">Esperando...</div>
+          <div class="player-box-score" id="scoreP2">Casilla: 0 / 15</div>
+        </div>
+      </div>
+
+      <div class="track-wrapper">
+        <div class="track-scroll">
+          <div class="track-title"><span id="trackLabelP1">P1</span></div>
+          <div class="track" id="p1Track"></div>
+        </div>
+
+        <div class="track-scroll">
+          <div class="track-title"><span id="trackLabelP2">P2</span></div>
+          <div class="track" id="p2Track"></div>
+        </div>
+      </div>
+
+      <div class="turn-banner" id="turnBanner">Esperando al rival...</div>
+      <div class="log-box" id="logBox"></div>
+
+      <div class="actions-grid">
+        <button class="btn" id="btnStep1" style="background: #10b981; color: white;" disabled>🚶‍♂️ Paso Seguro (+1)</button>
+        <button class="btn" id="btnStep2" style="background: #f59e0b; color: white;" disabled>🏃‍♂️ Rápido (+2 | 25% Falla)</button>
+      </div>
+
+      <button class="btn btn-reset" id="btnReset" style="display: none;">🔄 Revancha / Reiniciar Partida</button>
+    </div>
+  </div>
+
+  <!-- Firebase y Motor del Juego -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCvvUoD9nS8U0XFCOLSBWIx2Ec_ELPI8Us",
+      authDomain: "minijuegos-web.firebaseapp.com",
+      projectId: "minijuegos-web",
+      storageBucket: "minijuegos-web.firebasestorage.app",
+      messagingSenderId: "977777183362",
+      appId: "1:977777183362:web:cb145daf4714fef320829b",
+      measurementId: "G-8XTZB1CX3D",
+      databaseURL: "https://minijuegos-web-default-rtdb.firebaseio.com"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Sistema de Efectos de Sonido con Web Audio API
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playTone(freq, duration = 0.12, type = 'sine', startDelay = 0) {
+      setTimeout(() => {
+        try {
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + duration);
+        } catch (e) {}
+      }, startDelay);
+    }
+
+    const sfx = {
+      join: () => { playTone(400, 0.08); playTone(600, 0.12, 'sine', 90); },
+      step: () => { playTone(500, 0.08, 'triangle'); },
+      boost: () => { playTone(450, 0.08); playTone(650, 0.08, 'sine', 70); playTone(850, 0.15, 'sine', 140); },
+      trap: () => { playTone(300, 0.12, 'sawtooth'); playTone(200, 0.2, 'sawtooth', 100); },
+      fail: () => { playTone(220, 0.25, 'sawtooth'); },
+      win: () => {
+        playTone(440, 0.12);
+        playTone(554.37, 0.12, 'sine', 120);
+        playTone(659.25, 0.12, 'sine', 240);
+        playTone(880, 0.35, 'sine', 360);
+      }
+    };
+
+    // Configuración de Casillas Especiales
+    const TOTAL_STEPS = 15;
+    const BOOST_CELLS = [4, 10];
+    const TRAP_CELLS = [7, 12];
+
+    let roomCode = "";
+    let playerRole = null;
+    let myNick = "";
+
+    // Elementos DOM
+    const lobby = document.getElementById("lobby");
+    const gameArea = document.getElementById("gameArea");
+    const inputNick = document.getElementById("inputNick");
+    const inputRoom = document.getElementById("inputRoom");
+    const btnCreate = document.getElementById("btnCreate");
+    const btnJoin = document.getElementById("btnJoin");
+    const btnStep1 = document.getElementById("btnStep1");
+    const btnStep2 = document.getElementById("btnStep2");
+    const btnReset = document.getElementById("btnReset");
+    const displayRoomCode = document.getElementById("displayRoomCode");
+    const playerTag = document.getElementById("playerTag");
+    const nameP1 = document.getElementById("nameP1");
+    const nameP2 = document.getElementById("nameP2");
+    const scoreP1 = document.getElementById("scoreP1");
+    const scoreP2 = document.getElementById("scoreP2");
+    const trackLabelP1 = document.getElementById("trackLabelP1");
+    const trackLabelP2 = document.getElementById("trackLabelP2");
+    const p1Track = document.getElementById("p1Track");
+    const p2Track = document.getElementById("p2Track");
+    const turnBanner = document.getElementById("turnBanner");
+    const logBox = document.getElementById("logBox");
+
+    // Construcción visual del tablero
+    function initTrackUI() {
+      p1Track.innerHTML = "";
+      p2Track.innerHTML = "";
+      for (let i = 0; i <= TOTAL_STEPS; i++) {
+        let typeClass = "";
+        let content = i;
+        if (BOOST_CELLS.includes(i)) { typeClass = "boost"; content = "⚡"; }
+        else if (TRAP_CELLS.includes(i)) { typeClass = "trap"; content = "💀"; }
+        else if (i === TOTAL_STEPS) { typeClass = "finish"; content = "🏆"; }
+
+        const c1 = document.createElement("div");
+        c1.className = `step-cell ${typeClass}`;
+        c1.innerHTML = content;
+        c1.id = `p1-c-${i}`;
+        p1Track.appendChild(c1);
+
+        const c2 = document.createElement("div");
+        c2.className = `step-cell ${typeClass}`;
+        c2.innerHTML = content;
+        c2.id = `p2-c-${i}`;
+        p2Track.appendChild(c2);
+      }
+    }
+    initTrackUI();
+
+    function renderTokens(p1, p2) {
+      document.querySelectorAll(".token").forEach(t => t.remove());
+      const cell1 = document.getElementById(`p1-c-${p1}`);
+      if (cell1) {
+        const t1 = document.createElement("div");
+        t1.className = "token token-p1";
+        t1.innerText = "1";
+        cell1.appendChild(t1);
+      }
+      const cell2 = document.getElementById(`p2-c-${p2}`);
+      if (cell2) {
+        const t2 = document.createElement("div");
+        t2.className = "token token-p2";
+        t2.innerText = "2";
+        cell2.appendChild(t2);
+      }
+      scoreP1.innerText = `Casilla: ${p1} / ${TOTAL_STEPS}`;
+      scoreP2.innerText = `Casilla: ${p2} / ${TOTAL_STEPS}`;
+    }
+
+    function generateCode() {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let code = "";
+      for (let i = 0; i < 4; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+      return code;
+    }
+
+    // Crear sala
+    btnCreate.addEventListener("click", async () => {
+      myNick = inputNick.value.trim();
+      if (!myNick) return alert("Por favor escribe tu nombre o apodo.");
+
+      roomCode = generateCode();
+      playerRole = "p1";
+
+      const roomRef = ref(db, `rooms/${roomCode}`);
+      await set(roomRef, {
+        nameP1: myNick,
+        nameP2: "Esperando...",
+        p1: 0,
+        p2: 0,
+        turn: "p1",
+        status: "waiting",
+        winner: null,
+        log: `${myNick} creó la sala.`
+      });
+
+      startRoomListener();
+    });
+
+    // Unirse a sala
+    btnJoin.addEventListener("click", async () => {
+      myNick = inputNick.value.trim();
+      const code = inputRoom.value.trim().toUpperCase();
+      if (!myNick) return alert("Por favor escribe tu nombre o apodo.");
+      if (code.length !== 4) return alert("El código debe ser de 4 caracteres.");
+
+      const roomRef = ref(db, `rooms/${code}`);
+      const snap = await get(roomRef);
+      if (!snap.exists()) return alert("La sala no existe.");
+
+      const data = snap.val();
+      if (data.status !== "waiting") return alert("La sala está llena o en curso.");
+
+      roomCode = code;
+      playerRole = "p2";
+
+      await update(roomRef, {
+        nameP2: myNick,
+        status: "playing",
+        log: `${myNick} se unió a la carrera.`
+      });
+
+      startRoomListener();
+    });
+
+    // Escucha de Firebase en tiempo real
+    function startRoomListener() {
+      sfx.join();
+      lobby.style.display = "none";
+      gameArea.style.display = "flex";
+      displayRoomCode.innerText = roomCode;
+
+      if (playerRole === "p1") {
+        playerTag.className = "player-tag tag-p1";
+        playerTag.innerText = `Jugador 1 (Tú: ${myNick})`;
+      } else {
+        playerTag.className = "player-tag tag-p2";
+        playerTag.innerText = `Jugador 2 (Tú: ${myNick})`;
+      }
+
+      const roomRef = ref(db, `rooms/${roomCode}`);
+      onValue(roomRef, (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+
+        nameP1.innerText = data.nameP1 || "Jugador 1";
+        nameP2.innerText = data.nameP2 || "Esperando rival...";
+        trackLabelP1.innerText = `${data.nameP1 || 'P1'} (Rosa)`;
+        trackLabelP2.innerText = `${data.nameP2 || 'P2'} (Morado)`;
+
+        renderTokens(data.p1, data.p2);
+        if (data.log) logBox.innerText = data.log;
+
+        // Estado: Esperando al oponente
+        if (data.status === "waiting") {
+          turnBanner.innerText = `Comparte el código ${roomCode} con tu rival`;
+          btnStep1.disabled = true;
+          btnStep2.disabled = true;
+          btnReset.style.display = "none";
+          return;
+        }
+
+        // Estado: Ganador
+        if (data.winner) {
+          btnStep1.disabled = true;
+          btnStep2.disabled = true;
+          btnReset.style.display = "block";
+
+          const winnerName = data.winner === "p1" ? data.nameP1 : data.nameP2;
+          if (data.winner === playerRole) {
+            turnBanner.innerText = `🏆 ¡FELICIDADES ${winnerName}, GANASTE LA CARRERA! 🎉`;
+            sfx.win();
+          } else {
+            turnBanner.innerText = `💀 ${winnerName} cruzó la meta primero.`;
+            sfx.fail();
+          }
+          return;
+        }
+
+        // Estado: Jugando
+        btnReset.style.display = "none";
+        const isMyTurn = data.turn === playerRole;
+        btnStep1.disabled = !isMyTurn;
+        btnStep2.disabled = !isMyTurn;
+
+        if (isMyTurn) {
+          turnBanner.innerText = `👉 ¡Tu turno, ${myNick}! Elige tu jugada`;
+        } else {
+          const currentTurnName = data.turn === "p1" ? data.nameP1 : data.nameP2;
+          turnBanner.innerText = `⏳ Turno de ${currentTurnName}...`;
+        }
+      });
+    }
+
+    // Lógica de Movimiento
+    async function makeMove(steps, failChance = 0) {
+      const roomRef = ref(db, `rooms/${roomCode}`);
+      const snap = await get(roomRef);
+      const data = snap.val();
+
+      if (data.turn !== playerRole || data.winner) return;
+
+      let advanced = steps;
+      let logMsg = "";
+
+      // Verificar tropiezo en avance rápido
+      if (failChance > 0 && Math.random() < failChance) {
+        advanced = 0;
+        sfx.fail();
+        logMsg = `⚠️ ¡${myNick} tropezó en el salto y perdió el turno!`;
+      } else {
+        sfx.step();
+        logMsg = `➡️ ${myNick} avanzó ${steps} casilla(s).`;
+      }
+
+      let newPos = (data[playerRole] || 0) + advanced;
+
+      // Trampas e impulsos si logró moverse
+      if (advanced > 0) {
+        if (BOOST_CELLS.includes(newPos)) {
+          newPos += 2;
+          sfx.boost();
+          logMsg += ` ⚡ ¡Casilla Impulso! +2 casillas extra.`;
+        } else if (TRAP_CELLS.includes(newPos)) {
+          newPos -= 1;
+          sfx.trap();
+          logMsg += ` 🔴 ¡Casilla Trampa! Retrocede 1 casilla.`;
+        }
+      }
+
+      if (newPos < 0) newPos = 0;
+      if (newPos > TOTAL_STEPS) newPos = TOTAL_STEPS;
+
+      let updates = {};
+      updates[playerRole] = newPos;
+      updates.turn = playerRole === "p1" ? "p2" : "p1";
+      updates.log = logMsg;
+
+      if (newPos >= TOTAL_STEPS) {
+        updates.winner = playerRole;
+        updates.status = "finished";
+        updates.log = `🏁 ¡${myNick} ha cruzado la meta en primer lugar!`;
+      }
+
+      await update(roomRef, updates);
+    }
+
+    btnStep1.addEventListener("click", () => makeMove(1, 0));
+    btnStep2.addEventListener("click", () => makeMove(2, 0.25));
+
+    // Botón de Revancha / Reinicio de Partida
+    btnReset.addEventListener("click", async () => {
+      const roomRef = ref(db, `rooms/${roomCode}`);
+      await update(roomRef, {
+        p1: 0,
+        p2: 0,
+        turn: "p1",
+        status: "playing",
+        winner: null,
+        log: "🔄 ¡Partida reiniciada! Comienza Jugador 1."
+      });
+      sfx.join();
+    });
+  </script>
+</body>
+</html>
