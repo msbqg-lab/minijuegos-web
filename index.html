@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Duelo de Pasos - Multijugador</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f8fafc;
+      --accent: #38bdf8;
+      --p1: #ec4899;
+      --p2: #8b5cf6;
+      --p1-track: #f472b6;
+      --p2-track: #a78bfa;
+      --border: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem 1rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    header {
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      color: var(--accent);
+      margin-bottom: 0.25rem;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    }
+
+    .rules-card {
+      border-left: 4px solid var(--accent);
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .rules-card h3 {
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    .rules-card ol {
+      padding-left: 1.2rem;
+    }
+
+    .rules-card li {
+      margin-bottom: 0.25rem;
+    }
+
+    .lobby {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0b1120;
+      color: #fff;
+      font-size: 1rem;
+      text-transform: uppercase;
+    }
+
+    button {
+      padding: 0.75rem 1.25rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #0b1120;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .game-area {
+      display: none;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .room-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0b1120;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .room-code {
+      font-weight: bold;
+      color: var(--accent);
+      letter-spacing: 1px;
+    }
+
+    .status-badge {
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+
+    .p1-badge { background: var(--p1); color: white; }
+    .p2-badge { background: var(--p2); color: white; }
+
+    .track-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      margin: 1rem 0;
+    }
+
+    .track-label {
+      font-size: 0.85rem;
+      font-weight: bold;
+      margin-bottom: 0.4rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .track {
+      display: flex;
+      justify-content: space-between;
+      background: #0b1120;
+      padding: 0.5rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+
+    .step-cell {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: #64748b;
+      position: relative;
+    }
+
+    .step-cell.finish {
+      background: #334155;
+      color: #facc15;
+    }
+
+    .token {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      position: absolute;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    .token-p1 {
+      background: var(--p1);
+      color: var(--p1);
+    }
+
+    .token-p2 {
+      background: var(--p2);
+      color: var(--p2);
+    }
+
+    .turn-indicator {
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: bold;
+      padding: 0.75rem;
+      border-radius: 8px;
+      background: #0b1120;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .step-btn {
+      padding: 1rem;
+      font-size: 1.1rem;
+    }
+
+    .step-1-btn {
+      background: #10b981;
+      color: #fff;
+    }
+
+    .step-2-btn {
+      background: #f59e0b;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>🏁 Duelo de Pasos</h1>
+      <p>Llega a la meta de 10 casillas antes que tu rival</p>
+    </header>
+
+    <!-- Instrucciones -->
+    <div class="card rules-card">
+      <h3>📋 Reglas del Juego</h3>
+      <ol>
+        <li>Un jugador <strong>Crea la Sala</strong> y le pasa el código de 4 dígitos al rival.</li>
+        <li>El rival escribe el código y pulsa <strong>Unirse</strong>.</li>
+        <li>Se juega por turnos alternados. En tu turno, eliges dar <strong>1 paso</strong> seguro o arriesgar <strong>2 pasos</strong>.</li>
+        <li>Al arriesgar 2 pasos tienes un 20% de probabilidad de tropezar y no avanzar nada.</li>
+        <li>El primer jugador en llegar a la casilla 10 gana la partida.</li>
+      </ol>
+    </div>
+
+    <!-- Menú Inicial / Salas -->
+    <div class="card lobby" id="lobby">
+      <button id="btnCreate">Crear Nueva Sala</button>
+      <div style="text-align: center; font-size: 0.85rem; color: #94a3b8;">O ÚNETE A UNA EXISTENTE</div>
+      <div class="input-group">
+        <input type="text" id="inputRoom" maxlength="4" placeholder="CÓDIGO (EJ: AB12)">
+        <button id="btnJoin">Unirse</button>
+      </div>
+    </div>
+
+    <!-- Tablero de Juego -->
+    <div class="card game-area" id="gameArea">
+      <div class="room-info">
+        <div>Sala: <span class="room-code" id="displayRoomCode">----</span></div>
+        <div id="playerBadge" class="status-badge">Esperando...</div>
+      </div>
+
+      <div class="track-wrapper">
+        <!-- Pista Jugador 1 -->
+        <div>
+          <div class="track-label">
+            <span style="color: var(--p1-track)">Jugador 1 (Rosa)</span>
+            <span id="p1Score">0 / 10</span>
+          </div>
+          <div class="track" id="p1Track"></div>
+        </div>
+
+        <!-- Pista Jugador 2 -->
+        <div>
+          <div class="track-label">
+            <span style="color: var(--p2-track)">Jugador 2 (Morado)</span>
+            <span id="p2Score">0 / 10</span>
+          </div>
+          <div class="track" id="p2Track"></div>
+        </div>
+      </div>
+
+      <div class="turn-indicator" id="turnIndicator">Esperando al contrincante...</div>
+
+      <div class="actions">
+        <button class="step-btn step-1-btn" id="btnStep1" disabled>Dar 1 Paso 🚶‍♂️</button>
+        <button class="step-btn step-2-btn" id="btnStep2" disabled>Arriesgar 2 🏃‍♂️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase y Lógica del Juego -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCvvUoD9nS8U0XFCOLSBWIx2Ec_ELPI8Us",
+      authDomain: "minijuegos-web.firebaseapp.com",
+      projectId: "minijuegos-web",
+      storageBucket: "minijuegos-web.firebasestorage.app",
+      messagingSenderId: "977777183362",
+      appId: "1:977777183362:web:cb145daf4714fef320829b",
+      measurementId: "G-8XTZB1CX3D",
+      databaseURL: "https://minijuegos-web-default-rtdb.firebaseio.com" // Asegura que Realtime Database esté activa en tu consola
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Sistema de Sonidos Web Audio
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(freq, type = 'sine', duration = 0.15) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function soundStep() { playBeep(440, 'triangle', 0.1); }
+    function soundFail() { playBeep(180, 'sawtooth', 0.25); }
+    function soundWin() { 
+      playBeep(523.25, 'sine', 0.15);
+      setTimeout(() => playBeep(659.25, 'sine', 0.15), 150);
+      setTimeout(() => playBeep(783.99, 'sine', 0.3), 300);
+    }
+
+    // Variables de estado
+    let roomCode = "";
+    let playerRole = null; // "p1" o "p2"
+    const TOTAL_STEPS = 10;
+
+    // Elementos DOM
+    const lobby = document.getElementById("lobby");
+    const gameArea = document.getElementById("gameArea");
+    const btnCreate = document.getElementById("btnCreate");
+    const btnJoin = document.getElementById("btnJoin");
+    const inputRoom = document.getElementById("inputRoom");
+    const displayRoomCode = document.getElementById("displayRoomCode");
+    const playerBadge = document.getElementById("playerBadge");
+    const turnIndicator = document.getElementById("turnIndicator");
+    const btnStep1 = document.getElementById("btnStep1");
+    const btnStep2 = document.getElementById("btnStep2");
+    const p1Track = document.getElementById("p1Track");
+    const p2Track = document.getElementById("p2Track");
+    const p1Score = document.getElementById("p1Score");
+    const p2Score = document.getElementById("p2Score");
+
+    // Construir pistas visuales
+    function renderTracks() {
+      p1Track.innerHTML = "";
+      p2Track.innerHTML = "";
+      for (let i = 0; i <= TOTAL_STEPS; i++) {
+        const c1 = document.createElement("div");
+        c1.className = `step-cell ${i === TOTAL_STEPS ? 'finish' : ''}`;
+        c1.innerText = i === TOTAL_STEPS ? '🏆' : i;
+        c1.id = `p1-step-${i}`;
+        p1Track.appendChild(c1);
+
+        const c2 = document.createElement("div");
+        c2.className = `step-cell ${i === TOTAL_STEPS ? 'finish' : ''}`;
+        c2.innerText = i === TOTAL_STEPS ? '🏆' : i;
+        c2.id = `p2-step-${i}`;
+        p2Track.appendChild(c2);
+      }
+    }
+    renderTracks();
+
+    function updateTokens(p1Pos, p2Pos) {
+      document.querySelectorAll(".token").forEach(t => t.remove());
+      const cell1 = document.getElementById(`p1-step-${p1Pos}`);
+      if (cell1) {
+        const t1 = document.createElement("div");
+        t1.className = "token token-p1";
+        cell1.appendChild(t1);
+      }
+      const cell2 = document.getElementById(`p2-step-${p2Pos}`);
+      if (cell2) {
+        const t2 = document.createElement("div");
+        t2.className = "token token-p2";
+        cell2.appendChild(t2);
+      }
+      p1Score.innerText = `${p1Pos} / ${TOTAL_STEPS}`;
+      p2Score.innerText = `${p2Pos} / ${TOTAL_STEPS}`;
+    }
+
+    // Generar código de sala
+    function makeId() {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let res = "";
+      for (let i = 0; i < 4; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+      return res;
+    }
+
+    // Crear sala
+    btnCreate.addEventListener("click", async () => {
+      roomCode = makeId();
+      playerRole = "p1";
+      const roomRef = ref(db, `rooms/${roomCode}`);
+      await set(roomRef, {
+        p1: 0,
+        p2: 0,
+        turn: "p1",
+        status: "waiting",
+        winner: null
+      });
+      initGame();
+    });
+
+    // Unirse a sala
+    btnJoin.addEventListener("click", async () => {
+      const code = inputRoom.value.trim().toUpperCase();
+      if (code.length !== 4) return alert("Ingresa un código de 4 caracteres.");
+      const roomRef = ref(db, `rooms/${code}`);
+      const snap = await get(roomRef);
+      if (!snap.exists()) return alert("La sala no existe.");
+      const data = snap.val();
+      if (data.status !== "waiting") return alert("La sala ya está completa o terminada.");
+
+      roomCode = code;
+      playerRole = "p2";
+      await update(roomRef, { status: "playing" });
+      initGame();
+    });
+
+    function initGame() {
+      lobby.style.display = "none";
+      gameArea.style.display = "flex";
+      displayRoomCode.innerText = roomCode;
+
+      if (playerRole === "p1") {
+        playerBadge.innerText = "Eres Jugador 1 (Rosa)";
+        playerBadge.className = "status-badge p1-badge";
+      } else {
+        playerBadge.innerText = "Eres Jugador 2 (Morado)";
+        playerBadge.className = "status-badge p2-badge";
+      }
+
+      // Escuchar cambios en la base de datos
+      const roomRef = ref(db, `rooms/${roomCode}`);
+      onValue(roomRef, (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+
+        updateTokens(data.p1, data.p2);
+
+        if (data.status === "waiting") {
+          turnIndicator.innerText = `Comparte el código ${roomCode} con tu rival...`;
+          btnStep1.disabled = true;
+          btnStep2.disabled = true;
+          return;
+        }
+
+        if (data.winner) {
+          btnStep1.disabled = true;
+          btnStep2.disabled = true;
+          if (data.winner === playerRole) {
+            turnIndicator.innerText = "🎉 ¡Felicidades, ganaste la carrera!";
+            soundWin();
+          } else {
+            turnIndicator.innerText = "💀 El rival cruzó la meta primero.";
+            soundFail();
+          }
+          return;
+        }
+
+        const isMyTurn = data.turn === playerRole;
+        btnStep1.disabled = !isMyTurn;
+        btnStep2.disabled = !isMyTurn;
+
+        if (isMyTurn) {
+          turnIndicator.innerText = "👉 ¡Es tu turno de mover!";
+        } else {
+          turnIndicator.innerText = "⏳ Turno del oponente...";
+        }
+      });
+    }
+
+    // Acciones de paso
+    async function makeMove(steps, failChance = 0) {
+      soundStep();
+      const roomRef = ref(db, `rooms/${roomCode}`);
+      const snap = await get(roomRef);
+      const data = snap.val();
+
+      if (data.turn !== playerRole || data.winner) return;
+
+      let advanced = steps;
+      if (failChance > 0 && Math.random() < failChance) {
+        advanced = 0;
+        soundFail();
+        alert("¡Tropezaste! No avanzas casillas en este turno.");
+      }
+
+      let newPos = (data[playerRole] || 0) + advanced;
+      if (newPos > TOTAL_STEPS) newPos = TOTAL_STEPS;
+
+      let updates = {};
+      updates[playerRole] = newPos;
+      updates.turn = playerRole === "p1" ? "p2" : "p1";
+
+      if (newPos >= TOTAL_STEPS) {
+        updates.winner = playerRole;
+        updates.status = "finished";
+      }
+
+      await update(roomRef, updates);
+    }
+
+    btnStep1.addEventListener("click", () => makeMove(1, 0));
+    btnStep2.addEventListener("click", () => makeMove(2, 0.20));
+  </script>
+</body>
+</html>
