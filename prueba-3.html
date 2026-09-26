@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Duelo de Cañones Canvas - Multijugador</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card: #151d30;
+      --card-alt: #1e2942;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --p1: #ef4444;
+      --p2: #3b82f6;
+      --border: #2b3a5a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.75rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 620px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    header {
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      color: var(--accent);
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .rules-card {
+      border-left: 4px solid var(--accent);
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+
+    .lobby {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    input[type="text"] {
+      padding: 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #080c14;
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .btn {
+      padding: 0.8rem 1.2rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #0b0f19;
+      font-weight: bold;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-secondary { background: #334155; color: white; }
+    .btn-fire { background: #f97316; color: white; font-size: 1.05rem; }
+    .btn-reset { background: #f59e0b; color: #0b0f19; width: 100%; margin-top: 0.5rem; }
+
+    .game-area {
+      display: none;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .room-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-alt);
+      padding: 0.5rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+
+    .player-tag {
+      padding: 0.25rem 0.6rem;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+
+    .tag-p1 { background: rgba(239, 68, 68, 0.2); color: var(--p1); border: 1px solid var(--p1); }
+    .tag-p2 { background: rgba(59, 130, 246, 0.2); color: var(--p2); border: 1px solid var(--p2); }
+
+    /* Canvas visual */
+    #gameCanvas {
+      width: 100%;
+      height: auto;
+      background: #060913;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      display: block;
+    }
+
+    /* Controles de tiro */
+    .controls-panel {
+      background: var(--card-alt);
+      border-radius: 10px;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.85rem;
+    }
+
+    .slider-row label {
+      width: 75px;
+    }
+
+    .slider-row input[type="range"] {
+      flex: 1;
+    }
+
+    .slider-val {
+      width: 45px;
+      text-align: right;
+      font-weight: bold;
+      color: var(--accent);
+    }
+
+    .turn-banner {
+      text-align: center;
+      padding: 0.5rem;
+      border-radius: 8px;
+      background: var(--card-alt);
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>🎯 Duelo de Cañones</h1>
+      <p style="color: var(--text-muted); font-size: 0.85rem;">Gráficos en Canvas 2D interactivo</p>
+    </header>
+
+    <!-- Reglas -->
+    <div class="card rules-card">
+      <p>Ajusta el <strong>Ángulo</strong> y la <strong>Potencia</strong> en tu turno para calcular la trayectoria de la bala. ¡El primero en vaciar la barra del rival gana!</p>
+    </div>
+
+    <!-- Menú Inicial -->
+    <div class="card lobby" id="lobby">
+      <div class="input-group">
+        <label for="inputNick">TU NOMBRE (OBLIGATORIO):</label>
+        <input type="text" id="inputNick" maxlength="12" placeholder="Ej: Marcos">
+      </div>
+
+      <button class="btn" id="btnCreate">🚀 Crear Batalla</button>
+      <div style="text-align: center; font-size: 0.8rem; color: var(--text-muted);">O ÚNETE A UNA SALA</div>
+
+      <div style="display: flex; gap: 0.5rem;">
+        <input type="text" id="inputRoom" maxlength="4" placeholder="CÓDIGO" style="flex: 1; text-transform: uppercase;">
+        <button class="btn btn-secondary" id="btnJoin">Unirse</button>
+      </div>
+    </div>
+
+    <!-- Zona de Juego -->
+    <div class="card game-area" id="gameArea">
+      <div class="room-header">
+        <div>SALA: <span id="displayRoomCode" style="color: var(--accent); font-weight: bold;">----</span></div>
+        <div id="playerTag" class="player-tag">Esperando...</div>
+      </div>
+
+      <!-- Lienzo donde se dibuja el juego -->
+      <canvas id="gameCanvas" width="600" height="300"></canvas>
+
+      <div class="turn-banner" id="turnBanner">Esperando al oponente...</div>
+
+      <!-- Controles deslizantes -->
+      <div class="controls-panel">
+        <div class="slider-row">
+          <label>Ángulo (°):</label>
+          <input type="range" id="angleRange" min="10" max="80" value="45">
+          <span class="slider-val" id="angleVal">45°</span>
+        </div>
+        <div class="slider-row">
+          <label>Potencia:</label>
+          <input type="range" id="powerRange" min="20" max="100" value="60">
+          <span class="slider-val" id="powerVal">60%</span>
+        </div>
+        <button class="btn btn-fire" id="btnShoot" disabled>💥 ¡Disparar!</button>
+      </div>
+
+      <button class="btn btn-reset" id="btnReset" style="display: none;">🔄 Revancha / Nueva Batalla</button>
+    </div>
+  </div>
+
+  <!-- Firebase y Motor Gráfico -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCvvUoD9nS8U0XFCOLSBWIx2Ec_ELPI8Us",
+      authDomain: "minijuegos-web.firebaseapp.com",
+      projectId: "minijuegos-web",
+      storageBucket: "minijuegos-web.firebasestorage.app",
+      messagingSenderId: "977777183362",
+      appId: "1:977777183362:web:cb145daf4714fef320829b",
+      measurementId: "G-8XTZB1CX3D",
+      databaseURL: "https://minijuegos-web-default-rtdb.firebaseio.com"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Audio Web API
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playTone(freq, dur = 0.1, type = 'sine') {
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + dur);
+      } catch (e) {}
+    }
+
+    const sfx = {
+      shoot: () => { playTone(180, 0.2, 'sawtooth'); },
+      hit: () => { playTone(90, 0.35, 'square'); },
+      miss: () => { playTone(130, 0.15, 'sine'); },
+      win: () => {
+        playTone(523, 0.15); setTimeout(() => playTone(659, 0.15), 150); setTimeout(() => playTone(783, 0.3), 300);
+      }
+    };
+
+    // Canvas Setup
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let roomCode = "";
+    let playerRole = null;
+    let myNick = "";
+    let gameState = null;
+    let projectile = null; // Para la animación de la bala
+
+    // Posiciones de los tanques
+    const TANKS = {
+      p1: { x: 70, y: 250, color: "#ef4444" },
+      p2: { x: 530, y: 250, color: "#3b82f6" }
+    };
+
+    // DOM
+    const lobby = document.getElementById("lobby");
+    const gameArea = document.getElementById("gameArea");
+    const inputNick = document.getElementById("inputNick");
+    const inputRoom = document.getElementById("inputRoom");
+    const btnCreate = document.getElementById("btnCreate");
+    const btnJoin = document.getElementById("btnJoin");
+    const displayRoomCode = document.getElementById("displayRoomCode");
+    const playerTag = document.getElementById("playerTag");
+    const turnBanner = document.getElementById("turnBanner");
+    const angleRange = document.getElementById("angleRange");
+    const powerRange = document.getElementById("powerRange");
+    const angleVal = document.getElementById("angleVal");
+    const powerVal = document.getElementById("powerVal");
+    const btnShoot = document.getElementById("btnShoot");
+    const btnReset = document.getElementById("btnReset");
+
+    angleRange.addEventListener("input", (e) => angleVal.innerText = `${e.target.value}°`);
+    powerRange.addEventListener("input", (e) => powerVal.innerText = `${e.target.value}%`);
+
+    function makeId() {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let code = "";
+      for (let i = 0; i < 4; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+      return code;
+    }
+
+    btnCreate.addEventListener("click", async () => {
+      myNick = inputNick.value.trim();
+      if (!myNick) return alert("Escribe tu nombre.");
+      roomCode = makeId();
+      playerRole = "p1";
+
+      const roomRef = ref(db, `tanks/${roomCode}`);
+      await set(roomRef, {
+        nameP1: myNick,
+        nameP2: "Esperando...",
+        hpP1: 100,
+        hpP2: 100,
+        turn: "p1",
+        status: "waiting",
+        shot: null,
+        winner: null
+      });
+      startGame();
+    });
+
+    btnJoin.addEventListener("click", async () => {
+      myNick = inputNick.value.trim();
+      const code = inputRoom.value.trim().toUpperCase();
+      if (!myNick || code.length !== 4) return alert("Datos inválidos.");
+
+      const roomRef = ref(db, `tanks/${code}`);
+      const snap = await get(roomRef);
+      if (!snap.exists()) return alert("La sala no existe.");
+
+      roomCode = code;
+      playerRole = "p2";
+
+      await update(roomRef, {
+        nameP2: myNick,
+        status: "playing"
+      });
+      startGame();
+    });
+
+    function startGame() {
+      lobby.style.display = "none";
+      gameArea.style.display = "flex";
+      displayRoomCode.innerText = roomCode;
+
+      if (playerRole === "p1") {
+        playerTag.className = "player-tag tag-p1";
+        playerTag.innerText = `P1: ${myNick}`;
+      } else {
+        playerTag.className = "player-tag tag-p2";
+        playerTag.innerText = `P2: ${myNick}`;
+      }
+
+      // Escuchar cambios de Firebase
+      const roomRef = ref(db, `tanks/${roomCode}`);
+      onValue(roomRef, (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+        gameState = data;
+
+        // Si hay un disparo en la base de datos y no lo estamos animando
+        if (data.shot && (!projectile || !projectile.active)) {
+          triggerShotAnimation(data.shot);
+        }
+
+        if (data.status === "waiting") {
+          turnBanner.innerText = `Comparte el código [ ${roomCode} ] con tu rival`;
+          btnShoot.disabled = true;
+          return;
+        }
+
+        if (data.winner) {
+          btnShoot.disabled = true;
+          btnReset.style.display = "block";
+          const winName = data.winner === "p1" ? data.nameP1 : data.nameP2;
+          turnBanner.innerText = data.winner === playerRole ? `🏆 ¡Ganaste el duelo, ${winName}!` : `💀 ${winName} te destruyó.`;
+          return;
+        }
+
+        btnReset.style.display = "none";
+        const isMyTurn = data.turn === playerRole && (!projectile || !projectile.active);
+        btnShoot.disabled = !isMyTurn;
+
+        if (isMyTurn) {
+          turnBanner.innerText = `👉 ¡Tu turno, ${myNick}! Ajusta y dispara`;
+        } else {
+          const currentName = data.turn === "p1" ? data.nameP1 : data.nameP2;
+          turnBanner.innerText = `⏳ Turno de apuntar de ${currentName}...`;
+        }
+      });
+
+      // Iniciar el bucle de renderizado a 60 FPS
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Disparar
+    btnShoot.addEventListener("click", async () => {
+      btnShoot.disabled = true;
+      const angle = Number(angleRange.value);
+      const power = Number(powerRange.value);
+
+      const roomRef = ref(db, `tanks/${roomCode}`);
+      await update(roomRef, {
+        shot: {
+          by: playerRole,
+          angle: angle,
+          power: power,
+          time: Date.now()
+        }
+      });
+    });
+
+    // Iniciar física de la bala
+    function triggerShotAnimation(shot) {
+      sfx.shoot();
+      const isP1 = shot.by === "p1";
+      const rad = (shot.angle * Math.PI) / 180;
+      const speed = shot.power * 0.16;
+
+      projectile = {
+        x: isP1 ? TANKS.p1.x : TANKS.p2.x,
+        y: isP1 ? TANKS.p1.y - 10 : TANKS.p2.y - 10,
+        vx: Math.cos(rad) * speed * (isP1 ? 1 : -1),
+        vy: -Math.sin(rad) * speed,
+        by: shot.by,
+        active: true
+      };
+    }
+
+    // Bucle principal de dibujo Canvas
+    function gameLoop() {
+      // 1. Limpiar pantalla
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Suelo
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(0, 260, canvas.width, 40);
+
+      if (gameState) {
+        // Dibujar Tanque 1
+        drawTank(TANKS.p1.x, TANKS.p1.y, TANKS.p1.color, gameState.nameP1, gameState.hpP1, 1);
+        // Dibujar Tanque 2
+        drawTank(TANKS.p2.x, TANKS.p2.y, TANKS.p2.color, gameState.nameP2, gameState.hpP2, -1);
+
+        // Actualizar y dibujar proyectil
+        if (projectile && projectile.active) {
+          projectile.x += projectile.vx;
+          projectile.y += projectile.vy;
+          projectile.vy += 0.18; // Gravedad suave
+
+          // Dibujar bala
+          ctx.beginPath();
+          ctx.arc(projectile.x, projectile.y, 5, 0, Math.PI * 2);
+          ctx.fillStyle = "#facc15";
+          ctx.fill();
+
+          // Colisión con suelo
+          if (projectile.y >= 260) {
+            projectile.active = false;
+            sfx.miss();
+            checkTurnAfterShot(false);
+          }
+
+          // Colisión con el rival
+          const target = projectile.by === "p1" ? TANKS.p2 : TANKS.p1;
+          const dist = Math.hypot(projectile.x - target.x, projectile.y - target.y);
+          if (dist < 25) {
+            projectile.active = false;
+            sfx.hit();
+            checkTurnAfterShot(true);
+          }
+        }
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function drawTank(x, y, color, name, hp, dir) {
+      // Cuerpo del tanque
+      ctx.fillStyle = color;
+      ctx.fillRect(x - 18, y - 10, 36, 18);
+      // Torreta
+      ctx.beginPath();
+      ctx.arc(x, y - 10, 10, 0, Math.PI * 2);
+      ctx.fill();
+      // Cañón
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(x, y - 10);
+      ctx.lineTo(x + (15 * dir), y - 20);
+      ctx.stroke();
+
+      // Nombre y Barra de Vida encima del tanque
+      ctx.fillStyle = "#fff";
+      ctx.font = "11px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(name || "", x, y - 35);
+
+      // Barra de vida
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(x - 20, y - 30, 40, 5);
+      ctx.fillStyle = "#22c55e";
+      ctx.fillRect(x - 20, y - 30, (Math.max(0, hp) / 100) * 40, 5);
+    }
+
+    // Resolver turno al terminar el disparo (solo lo ejecuta quien disparó para no duplicar datos)
+    async function checkTurnAfterShot(hit) {
+      if (!projectile || projectile.by !== playerRole) return;
+
+      const roomRef = ref(db, `tanks/${roomCode}`);
+      const snap = await get(roomRef);
+      const data = snap.val();
+
+      let hp1 = data.hpP1;
+      let hp2 = data.hpP2;
+
+      if (hit) {
+        if (playerRole === "p1") hp2 = Math.max(0, hp2 - 35);
+        else hp1 = Math.max(0, hp1 - 35);
+      }
+
+      let updates = {
+        hpP1: hp1,
+        hpP2: hp2,
+        turn: playerRole === "p1" ? "p2" : "p1",
+        shot: null
+      };
+
+      if (hp1 <= 0) { updates.winner = "p2"; updates.status = "finished"; sfx.win(); }
+      else if (hp2 <= 0) { updates.winner = "p1"; updates.status = "finished"; sfx.win(); }
+
+      await update(roomRef, updates);
+    }
+
+    // Revancha
+    btnReset.addEventListener("click", async () => {
+      const roomRef = ref(db, `tanks/${roomCode}`);
+      await update(roomRef, {
+        hpP1: 100,
+        hpP2: 100,
+        turn: "p1",
+        status: "playing",
+        winner: null,
+        shot: null
+      });
+    });
+  </script>
+</body>
+</html>
